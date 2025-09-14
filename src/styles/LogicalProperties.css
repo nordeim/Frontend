@@ -1,0 +1,132 @@
+/* src/styles/LogicalProperties.css */
+/* CSS Logical Properties for RTL support */
+/* WCAG 2.1 AA compliant */
+
+/* Base RTL styles */
+[dir="rtl"] {
+  /* Text alignment */
+  text-align: right;
+  
+  /* Float directions */
+  float: right;
+  
+  /* Clear directions */
+  clear: right;
+}
+
+/* Logical properties for margins */
+.ml-auto { margin-inline-start: auto; }
+.mr-auto { margin-inline-end: auto; }
+.ml-0 { margin-inline-start: 0; }
+.mr-0 { margin-inline-end: 0; }
+.ml-1 { margin-inline-start: 0.25rem; }
+.mr-1 { margin-inline-end: 0.25rem; }
+.ml-2 { margin-inline-start: 0.5rem; }
+.mr-2 { margin-inline-end: 0.5rem; }
+.ml-3 { margin-inline-start: 0.75rem; }
+.mr-3 { margin-inline-end: 0.75rem; }
+.ml-4 { margin-inline-start: 1rem; }
+.mr-4 { margin-inline-end: 1rem; }
+.ml-5 { margin-inline-start: 1.25rem; }
+.mr-5 { margin-inline-end: 1.25rem; }
+.ml-6 { margin-inline-start: 1.5rem; }
+.mr-6 { margin-inline-end: 1.5rem; }
+.ml-8 { margin-inline-start: 2rem; }
+.mr-8 { margin-inline-end: 2rem; }
+.ml-10 { margin-inline-start: 2.5rem; }
+.mr-10 { margin-inline-end: 2.5rem; }
+.ml-12 { margin-inline-start: 3rem; }
+.mr-12 { margin-inline-end: 3rem; }
+
+/* Logical properties for padding */
+.pl-0 { padding-inline-start: 0; }
+.pr-0 { padding-inline-end: 0; }
+.pl-1 { padding-inline-start: 0.25rem; }
+.pr-1 { padding-inline-end: 0.25rem; }
+.pl-2 { padding-inline-start: 0.5rem; }
+.pr-2 { padding-inline-end: 0.5rem; }
+.pl-3 { padding-inline-start: 0.75rem; }
+.pr-3 { padding-inline-end: 0.75rem; }
+.pl-4 { padding-inline-start: 1rem; }
+.pr-4 { padding-inline-end: 1rem; }
+.pl-5 { padding-inline-start: 1.25rem; }
+.pr-5 { padding-inline-end: 1.25rem; }
+.pl-6 { padding-inline-start: 1.5rem; }
+.pr-6 { padding-inline-end: 1.5rem; }
+.pl-8 { padding-inline-start: 2rem; }
+.pr-8 { padding-inline-end: 2rem; }
+.pl-10 { padding-inline-start: 2.5rem; }
+.pr-10 { padding-inline-end: 2.5rem; }
+.pl-12 { padding-inline-start: 3rem; }
+.pr-12 { padding-inline-end: 3rem; }
+
+/* Logical properties for borders */
+.border-l { border-inline-start-width: 1px; }
+.border-r { border-inline-end-width: 1px; }
+.border-l-0 { border-inline-start-width: 0; }
+.border-r-0 { border-inline-end-width: 0; }
+.border-l-2 { border-inline-start-width: 2px; }
+.border-r-2 { border-inline-end-width: 2px; }
+.border-l-4 { border-inline-start-width: 4px; }
+.border-r-4 { border-inline-end-width: 4px; }
+
+/* Logical properties for positioning */
+.left-0 { inset-inline-start: 0; }
+.right-0 { inset-inline-end: 0; }
+.left-1 { inset-inline-start: 0.25rem; }
+.right-1 { inset-inline-end: 0.25rem; }
+.left-2 { inset-inline-start: 0.5rem; }
+.right-2 { inset-inline-end: 0.5rem; }
+.left-3 { inset-inline-start: 0.75rem; }
+.right-3 { inset-inline-end: 0.75rem; }
+.left-4 { inset-inline-start: 1rem; }
+.right-4 { inset-inline-end: 1rem; }
+
+/* Logical properties for text alignment */
+.text-left { text-align: start; }
+.text-right { text-align: end; }
+
+/* Logical properties for floats */
+.float-left { float: inline-start; }
+.float-right { float: inline-end; }
+
+/* Logical properties for clear */
+.clear-left { clear: inline-start; }
+.clear-right { clear: inline-end; }
+
+/* RTL-specific overrides */
+[dir="rtl"] {
+  /* Mirror directional icons and arrows */
+  .rtl-mirror {
+    transform: scaleX(-1);
+  }
+  
+  /* Reverse flex direction */
+  .rtl-flex-reverse {
+    flex-direction: row-reverse;
+  }
+  
+  /* Reverse grid auto flow */
+  .rtl-grid-reverse {
+    grid-auto-flow: dense;
+  }
+  
+  /* Mirror animations */
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  
+  .animate-slide-in-left {
+    animation: slide-in-right 0.3s ease-out;
+  }
+  
+  .animate-slide-in-right {
+    animation: slide-in-left 0.3s ease-out;
+  }
+}
