@@ -1,0 +1,169 @@
+// src/store/slices/uiSlice.ts additions
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { RootState } from '@/store'
+
+interface UiState {
+  isDarkMode: boolean
+  isSidebarCollapsed: boolean
+  isMobileMenuOpen: boolean
+  isLoading: boolean
+  notifications: Notification[]
+  theme: 'light' | 'dark' | 'auto'
+  fontSize: 'small' | 'medium' | 'large'
+  reducedMotion: boolean
+  highContrast: boolean
+  screenReaderMode: boolean
+  viewport: {
+    width: number
+    height: number
+    isMobile: boolean
+    isTablet: boolean
+    isDesktop: boolean
+  }
+}
+
+const initialState: UiState = {
+  isDarkMode: false,
+  isSidebarCollapsed: false,
+  isMobileMenuOpen: false,
+  isLoading: false,
+  notifications: [],
+  theme: 'auto',
+  fontSize: 'medium',
+  reducedMotion: false,
+  highContrast: false,
+  screenReaderMode: false,
+  viewport: {
+    width: typeof window !== 'undefined' ? window.innerWidth : 1024,
+    height: typeof window !== 'undefined' ? window.innerHeight : 768,
+    isMobile: false,
+    isTablet: false,
+    isDesktop: true
+  }
+}
+
+const uiSlice = createSlice({
+  name: 'ui',
+  initialState,
+  reducers: {
+    toggleTheme: (state) => {
+      state.isDarkMode = !state.isDarkMode
+      // Apply theme to document
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.toggle('dark', state.isDarkMode)
+        localStorage.setItem('theme', state.isDarkMode ? 'dark' : 'light')
+      }
+    },
+    setTheme: (state, action: PayloadAction<'light' | 'dark' | 'auto'>) => {
+      state.theme = action.payload
+      if (action.payload === 'auto') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        state.isDarkMode = prefersDark
+      } else {
+        state.isDarkMode = action.payload === 'dark'
+      }
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.toggle('dark', state.isDarkMode)
+        localStorage.setItem('theme', action.payload)
+      }
+    },
+    toggleSidebar: (state) => {
+      state.isSidebarCollapsed = !state.isSidebarCollapsed
+      localStorage.setItem('sidebarCollapsed', String(state.isSidebarCollapsed))
+    },
+    setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
+      state.isSidebarCollapsed = action.payload
+      localStorage.setItem('sidebarCollapsed', String(state.isSidebarCollapsed))
+    },
+    toggleMobileMenu: (state) => {
+      state.isMobileMenuOpen = !state.isMobileMenuOpen
+    },
+    setMobileMenuOpen: (state, action: PayloadAction<boolean>) => {
+      state.isMobileMenuOpen = action.payload
+    },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload
+    },
+    addNotification: (state, action: PayloadAction<Notification>) => {
+      state.notifications.push(action.payload)
+    },
+    removeNotification: (state, action: PayloadAction<string>) => {
+      state.notifications = state.notifications.filter(n => n.id !== action.payload)
+    },
+    clearNotifications: (state) => {
+      state.notifications = []
+    },
+    setFontSize: (state, action: PayloadAction<'small' | 'medium' | 'large'>) => {
+      state.fontSize = action.payload
+      document.documentElement.style.fontSize = 
+        action.payload === 'small' ? '14px' : 
+        action.payload === 'large' ? '18px' : '16px'
+      localStorage.setItem('fontSize', action.payload)
+    },
+    toggleReducedMotion: (state) => {
+      state.reducedMotion = !state.reducedMotion
+      if (state.reducedMotion) {
+        document.documentElement.style.setProperty('--animation-duration', '0.01ms')
+      } else {
+        document.documentElement.style.removeProperty('--animation-duration')
+      }
+      localStorage.setItem('reducedMotion', String(state.reducedMotion))
+    },
+    toggleHighContrast: (state) => {
+      state.highContrast = !state.highContrast
+      document.documentElement.classList.toggle('high-contrast', state.highContrast)
+      localStorage.setItem('highContrast', String(state.highContrast))
+    },
+    toggleScreenReaderMode: (state) => {
+      state.screenReaderMode = !state.screenReaderMode
+      localStorage.setItem('screenReaderMode', String(state.screenReaderMode))
+    },
+    updateViewport: (state, action: PayloadAction<{ width: number; height: number }>) => {
+      const { width, height } = action.payload
+      state.viewport.width = width
+      state.viewport.height = height
+      state.viewport.isMobile = width < 640
+      state.viewport.isTablet = width >= 640 && width < 1024
+      state.viewport.isDesktop = width >= 1024
+    }
+  }
+})
+
+// Selectors
+export const selectUiState = (state: RootState) => state.ui
+export const selectIsDarkMode = (state: RootState) => state.ui.isDarkMode
+export const selectIsSidebarCollapsed = (state: RootState) => state.ui.isSidebarCollapsed
+export const selectIsMobileMenuOpen = (state: RootState) => state.ui.isMobileMenuOpen
+export const selectIsLoading = (state: RootState) => state.ui.isLoading
+export const selectNotifications = (state: RootState) => state.ui.notifications
+export const selectTheme = (state: RootState) => state.ui.theme
+export const selectFontSize = (state: RootState) => state.ui.fontSize
+export const selectAccessibilitySettings = (state: RootState) => ({
+  reducedMotion: state.ui.reducedMotion,
+  highContrast: state.ui.highContrast,
+  screenReaderMode: state.ui.screenReaderMode
+})
+export const selectViewport = (state: RootState) => state.ui.viewport
+export const selectIsMobile = (state: RootState) => state.ui.viewport.isMobile
+export const selectIsTablet = (state: RootState) => state.ui.viewport.isTablet
+export const selectIsDesktop = (state: RootState) => state.ui.viewport.isDesktop
+
+export const {
+  toggleTheme,
+  setTheme,
+  toggleSidebar,
+  setSidebarCollapsed,
+  toggleMobileMenu,
+  setMobileMenuOpen,
+  setLoading,
+  addNotification,
+  removeNotification,
+  clearNotifications,
+  setFontSize,
+  toggleReducedMotion,
+  toggleHighContrast,
+  toggleScreenReaderMode,
+  updateViewport
+} = uiSlice.actions
+
+export default uiSlice.reducer
