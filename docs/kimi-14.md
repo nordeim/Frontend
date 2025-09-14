@@ -2172,4 +2172,300 @@ export const useGestureRecognizer = (
     return {
       direction: direction * 180 / Math.PI,
       scale,
-      rotation: rotation * 180 / Math.PI
+      rotation: rotation * 180 / Math.PI,
+    };
+  }, []);
+
+  /**
+   * Compare gesture with pattern using dynamic time warping (DTW)
+   */
+  const compareWithPattern = useCallback((gesture: GesturePoint[], pattern: GesturePoint[]): number => {
+    const distanceMatrix: number[][] = Array.from({ length: gesture.length }, () => 
+      Array(pattern.length).fill(Infinity)
+    );
+    
+    for (let i = 0; i < gesture.length; i++) {
+      for (let j = 0; j < pattern.length; j++) {
+        const dx = gesture[i].x - pattern[j].x;
+        const dy = gesture[i].y - pattern[j].y;
+        const distance = Math.sqrt(dx ** 2 + dy ** 2);
+        
+        if (i === 0 && j === 0) {
+          distanceMatrix[i][j] = distance;
+        } else if (i === 0) {
+          distanceMatrix[i][j] = distance + distanceMatrix[i][j - 1];
+        } else if (j === 0) {
+          distanceMatrix[i][j] = distance + distanceMatrix[i - 1][j];
+        } else {
+          distanceMatrix[i][j] = distance + Math.min(
+            distanceMatrix[i - 1][j],    // Insertion
+            distanceMatrix[i][j - 1],    // Deletion
+            distanceMatrix[i - 1][j - 1] // Match
+          );
+        }
+      }
+    }
+    
+    return distanceMatrix[gesture.length - 1][pattern.length - 1];
+  }, []);
+
+  /**
+   * Recognize gesture pattern
+   */
+  const recognizePattern = useCallback((gesture: GesturePoint[]): RecognizedGesture | null => {
+    if (gesture.length < mergedConfig.minPoints) return null;
+    
+    const normalizedGesture = normalizePoints(smoothPoints(gesture));
+    const resampledGesture = resamplePoints(normalizedGesture);
+    
+    const features = calculateFeatures(resampledGesture);
+    
+    let bestMatch: PatternMatch | null = null;
+    let bestScore = Infinity;
+    
+    patterns.forEach(pattern => {
+      const normalizedPattern = normalizePoints(smoothPoints(pattern.points));
+      const resampledPattern = resamplePoints(normalizedPattern);
+      
+      const distance = compareWithPattern(resampledGesture, resampledPattern);
+      const similarity = 1 - distance / (mergedConfig.normalizationSize * resampledGesture.length);
+      
+      if (similarity >= mergedConfig.similarityThreshold && similarity > bestScore) {
+        bestMatch = {
+          patternId: pattern.id,
+          confidence: pattern.confidence,
+          similarity,
+          transformation: {
+            scale: features.scale,
+            rotation: features.rotation,
+            translation: { x: 0, y: 0 },
+          },
+        };
+        bestScore = similarity;
+      }
+    });
+    
+    if (!bestMatch) return null;
+    
+    return {
+      pattern: patterns.find(p => p.id === bestMatch.patternId)!,
+      confidence: bestMatch.confidence,
+      score: bestScore,
+      matches: [bestMatch],
+    };
+  }, [mergedConfig, normalizePoints, smoothPoints, resamplePoints, calculateFeatures, compareWithPattern]);
+
+  /**
+   * Start recording gesture
+   */
+  const startRecording = useCallback(() => {
+    setIsRecording(true);
+    recordingStartRef.current = Date.now();
+    lastPointRef.current = null;
+    setCurrentGesture([]);
+    setRecognizedGesture(null);
+  }, []);
+
+  /**
+   * Add point to current gesture
+   */
+  const addPoint = useCallback((point: GesturePoint) => {
+    if (!isRecording) return;
+    
+    const now = Date.now();
+    const timestamp = now - recordingStartRef.current;
+    
+    const newPoint = { ...point, timestamp };
+    
+    if (lastPointRef.current) {
+      const dx = newPoint.x - lastPointRef.current.x;
+      const dy = newPoint.y - lastPointRef.current.y;
+      const distance = Math.sqrt(dx ** 2 + dy ** 2);
+      
+      if (distance < 1) return; // Filter out close points
+    }
+    
+    lastPointRef.current = newPoint;
+    setCurrentGesture(prev => [...prev, newPoint]);
+  }, [isRecording]);
+
+  /**
+   * Stop recording and recognize gesture
+   */
+  const stopRecording = useCallback(() => {
+    setIsRecording(false);
+    
+    if (currentGesture.length < mergedConfig.minPoints) {
+      setRecognizedGesture(null);
+      return;
+    }
+    
+    const recognition = recognizePattern(currentGesture);
+    setRecognizedGesture(recognition);
+    
+    // Add to history
+    if (recognition) {
+      setGestureHistory(prev => [...prev, recognition]);
+    }
+    
+    // Reset state
+    setCurrentGesture([]);
+    lastPointRef.current = null;
+  }, [currentGesture, mergedConfig.minPoints, recognizePattern]);
+
+  /**
+   * Clear gesture history
+   */
+  const clearHistory = useCallback(() => {
+    setGestureHistory([]);
+  }, []);
+
+  /**
+   * Get gesture history
+   */
+  const getGestureHistory = useCallback((limit: number = 10): RecognizedGesture[] => {
+    return gestureHistory.slice(-limit);
+  }, [gestureHistory]);
+
+  /**
+   * Set custom patterns
+   */
+  const setPatterns = useCallback((newPatterns: GesturePattern[]) => {
+    patterns.length = 0;
+    patterns.push(...newPatterns);
+  }, []);
+
+  /**
+   * Add new pattern
+   */
+  const addPattern = useCallback((newPattern: GesturePattern) => {
+    patterns.push(newPattern);
+  }, []);
+
+  /**
+   * Remove pattern by ID
+   */
+  const removePattern = useCallback((patternId: string) => {
+    const index = patterns.findIndex(p => p.id === patternId);
+    if (index !== -1) {
+      patterns.splice(index, 1);
+    }
+  }, []);
+
+  return {
+    isRecording,
+    currentGesture,
+    recognizedGesture,
+    gestureHistory,
+    
+    startRecording,
+    addPoint,
+    stopRecording,
+    clearHistory,
+    getGestureHistory,
+    setPatterns,
+    addPattern,
+    removePattern,
+  };
+};
+
+// Default export
+export default useGestureRecognizer;
+```
+
+### 5. Gesture Recognizer Component
+
+```tsx
+// src/components/Common/GestureRecognizer.tsx
+/**
+ * Gesture Recognizer Component
+ * Provides a wrapper for advanced gesture pattern recognition with visual feedback
+ * @module components/Common/GestureRecognizer
+ */
+
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useGestureRecognizer } from '@/hooks/useGestureRecognizer';
+import { GesturePattern, RecognizedGesture } from '@/hooks/useGestureRecognizer';
+import { useResponsive } from '@/hooks/useResponsive';
+import { clsx } from 'clsx';
+
+/**
+ * Gesture recognizer props
+ */
+export interface GestureRecognizerProps {
+  children: React.ReactNode;
+  patterns?: GesturePattern[];
+  config?: Partial<GestureRecognizerConfig>;
+  onGestureRecognized?: (gesture: RecognizedGesture) => void;
+  onGestureStart?: () => void;
+  onGestureEnd?: () => void;
+  className?: string;
+  feedback?: 'visual' | 'haptic' | 'none';
+  feedbackConfig?: TouchFeedbackConfig;
+  haptic?: 'light' | 'medium' | 'heavy' | boolean;
+  disabled?: boolean;
+  ariaLabel?: string;
+}
+
+/**
+ * Gesture Recognizer Component
+ * Enables advanced gesture recognition with visual and haptic feedback
+ * 
+ * @example
+ * ```tsx
+ * const customPatterns = [
+ *   {
+ *     id: 'custom-checkmark',
+ *     name: 'Custom Checkmark',
+ *     points: [
+ *       { x: 0.2, y: 0.6, timestamp: 0 },
+ *       { x: 0.4, y: 0.8, timestamp: 100 },
+ *       { x: 0.8, y: 0.2, timestamp: 200 },
+ *     ],
+ *     confidence: 0.9,
+ *   },
+ * ];
+ * 
+ * <GestureRecognizer
+ *   patterns={customPatterns}
+ *   onGestureRecognized={(gesture) => console.log('Recognized:', gesture.pattern.name)}
+ *   feedback="visual"
+ * >
+ *   <div className="p-4 bg-white rounded-lg">
+ *     <h3>Draw a checkmark</h3>
+ *   </div>
+ * </GestureRecognizer>
+ * ```
+ */
+export const GestureRecognizer: React.FC<GestureRecognizerProps> = ({
+  children,
+  patterns = [],
+  config = {},
+  onGestureRecognized,
+  onGestureStart,
+  onGestureEnd,
+  className,
+  feedback = 'visual',
+  feedbackConfig = { type: 'highlight' },
+  haptic = 'light',
+  disabled = false,
+  ariaLabel = 'Gesture recognizer',
+}) => {
+  const { isTouch } = useResponsive();
+  const { isRecording, recognizedGesture, startRecording, addPoint, stopRecording } = useGestureRecognizer(patterns, config);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [gesturePath, setGesturePath] = useState<string>('');
+  const [gesturePoints, setGesturePoints] = useState<GesturePoint[]>([]);
+  const [feedbackElement, setFeedbackElement] = useState<JSX.Element | null>(null);
+
+  /**
+   * Handle touch start
+   */
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (disabled) return;
+    
+    onGestureStart?.();
+    startRecording();
+    
+   
