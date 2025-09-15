@@ -2369,3 +2369,5 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
           <MetricCard
             title="LCP"
             value={currentMetrics.tim
+
+// https://www.kimi.com/share/d33mp4lm2cigtse0k080
